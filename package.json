@@ -1,0 +1,8 @@
+{
+  "name": "riot-reduxlike-async-example",
+  "version": "0.0.1",
+  "description": "Riot and Redux-like store showing the async example",
+  "main": "index.js",
+  "author": "travellingprog",
+  "license": "MIT"
+}
