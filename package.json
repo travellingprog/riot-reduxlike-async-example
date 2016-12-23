@@ -9,7 +9,10 @@
     "start": "node run/dev"
   },
   "dependencies": {
+    "babel-core": "^6.21.0",
+    "babel-preset-es2015-riot": "^1.1.0",
     "fs-extra": "^1.0.0",
+    "riot": "^3.0.5",
     "useref": "^1.2.0"
   }
 }

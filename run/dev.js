@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
+const babel = require('babel-core');
 const fse = require('fs-extra');
 const path = require('path');
+const riot = require('riot');
 const useref = require('useref');
 const util = require('./util');
 
@@ -16,16 +18,18 @@ function dev() {
 
   const srcDir = rootDir + '/src';
   const inputPage = srcDir + '/pages/index.html';
+  const inputTagDirs = [srcDir + '/components', srcDir + '/containers'];
 
   const buildDir = rootDir + '/build';
   const outputPage = buildDir + '/index.html';
-  const outputJsDir = buildDir + '/assets/js';
   const outputLibsDir = buildDir + '/assets/js/libs';
+  const outputTagsFile = buildDir + '/assets/js/tags.js'
 
   fse.removeSync(buildDir);
 
   compileHtml(inputPage, outputPage)
     .then(() => copyLibraries(libsDir, outputLibsDir))
+    .then(() => compileRiotTags(srcDir, inputTagDirs, outputTagsFile))
     .then(() => {
       console.timeEnd('dev task');
       console.log('done.');
@@ -52,9 +56,45 @@ function compileHtml(inputPage, outputPage) {
 }
 
 /** copyLibraries copies the external libraries into our JS directory */
-function copyLibraries(libsDir, outputJsDir) {
+function copyLibraries(libsDir, outputLibsDir) {
   console.time('copy libraries');
-  fse.copySync(libsDir, outputJsDir);
+  fse.copySync(libsDir, outputLibsDir);
   console.timeEnd('copy libraries');
-  return Promise.resolve();
+  return Promise.resolve(true);
+}
+
+/**
+ * compileRiotTags finds all Riot tags, compiles each one into ES2015+ JS, adds a source
+ * reference, concatenates all of that and then transforms that into ES5 JS. This function
+ * returns a Promise that is resolved when the full compilation is finished.
+ */
+function compileRiotTags(srcDir, inputTagDirs, outputFile) {
+  console.time('compile Riot tags');
+
+  const inputFiles = [];
+  for (let dir of inputTagDirs) {
+    inputFiles.push(...fse.walkSync(dir));
+  }
+
+  const fileCompilations = inputFiles.map(f => {
+    return util.readFile(f)
+      .then(tag => {
+        let preBabelJS = riot.compile(tag);
+
+        // this adds a source reference, because Riot doesn't produce a sourcemap AST yet
+        preBabelJS = `// source: ${path.relative(srcDir, f)}\n${preBabelJS}`;
+        return preBabelJS;
+      });
+  });
+
+  return Promise.all(fileCompilations)
+    .then(preBabelArr => {
+      const esNextJs = preBabelArr.join('\n');
+      const transformResult = babel.transform(esNextJs, { presets: ['es2015-riot'] });
+      return util.writeFile(outputFile, transformResult.code);
+    })
+    .then(() => {
+      console.timeEnd('compile Riot tags');
+      return true;
+    });
 }
