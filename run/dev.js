@@ -3,9 +3,13 @@
 const babel = require('babel-core');
 const chokidar = require('chokidar');
 const Concat = require('concat-with-sourcemaps');
+const finalhandler = require('finalhandler');
 const fse = require('fs-extra');
+const http = require('http');
+const opn = require('opn');
 const path = require('path');
 const riot = require('riot');
+const serveStatic = require('serve-static');
 const useref = require('useref');
 const util = require('./util');
 
@@ -31,12 +35,15 @@ function dev() {
   const outputTagsFile = buildDir + '/assets/js/tags.js';
   const outputAppJsFile = buildDir + '/assets/js/app.js';
 
+  const serverPort = 8888;
+
   fse.removeSync(buildDir);
 
   compileHtml(inputPage, outputPage)
     .then(() => copyLibraries(libsDir, outputLibsDir))
     .then(() => compileRiotTags(srcDir, inputTagDirs, outputTagsFile))
     .then(() => compileAppJs(inputAppPaths, outputAppJsFile))
+    .then(() => startServer(buildDir, serverPort))
     .then(() => watch([libsDir, srcDir], rootDir, function (filePath) {
       switch (true) {
         case filePath === inputPage:
@@ -172,11 +179,37 @@ function compileAppJs(inputAppPaths, outputAppJsFile) {
     })
 }
 
+/** startServer begins a static server and opens the root path in the browser */
+function startServer(dir, port) {
+  console.time('static server');
+
+  return new Promise((resolve, reject) => {
+    let isReady = false;
+    const serve = serveStatic(dir);
+
+    http
+      .createServer((req, res) => {
+        serve(req, res, finalhandler(req, res))
+      })
+      .on('error', err => {
+        console.error(`Server error: ${err}`);
+        if (!isReady) reject(err);
+      })
+      .listen(port, 'localhost', () => {
+        opn(`http://localhost:${port}/`);
+        console.timeEnd('static server');
+        resolve(true);
+      });
+  });
+}
+
 /**
  * watch will track changes on dirs, and run onChangeFn each time a change occurs. This function
  * return a Promise that is resolved when the watcher has been initiated.
  */
 function watch(dirs, rootDir, onChangeFn) {
+  console.time('watcher');
+
   return new Promise((resolve, reject) => {
     let isReady = false;
 
@@ -188,11 +221,12 @@ function watch(dirs, rootDir, onChangeFn) {
         }
 
         isReady = true;
+        console.timeEnd('watcher');
         resolve(true);
       })
       .on('error', err => {
-        console.log(`Watcher error: ${error}`);
-        if (!isReady) reject(error);
+        console.error(`Watcher error: ${err}`);
+        if (!isReady) reject(err);
       })
       .on('all', (event, filePath) => {
         const time = (new Date()).toLocaleTimeString();
