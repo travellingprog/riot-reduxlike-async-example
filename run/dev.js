@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const babel = require('babel-core');
+const Concat = require('concat-with-sourcemaps');
 const fse = require('fs-extra');
 const path = require('path');
 const riot = require('riot');
@@ -14,22 +15,27 @@ function dev() {
   console.time('dev task');
 
   const rootDir = path.resolve(__dirname, '..');
+  const buildDir = rootDir + '/build';
   const libsDir = rootDir + '/libs';
-
   const srcDir = rootDir + '/src';
+
   const inputPage = srcDir + '/pages/index.html';
   const inputTagDirs = [srcDir + '/components', srcDir + '/containers'];
+  const inputAppPaths = [
+    srcDir + '/actions', srcDir + '/reducers', srcDir + '/store',  srcDir + '/index.js',
+  ];
 
-  const buildDir = rootDir + '/build';
   const outputPage = buildDir + '/index.html';
   const outputLibsDir = buildDir + '/assets/js/libs';
-  const outputTagsFile = buildDir + '/assets/js/tags.js'
+  const outputTagsFile = buildDir + '/assets/js/tags.js';
+  const outputAppJsFile = buildDir + '/assets/js/app.js';
 
   fse.removeSync(buildDir);
 
   compileHtml(inputPage, outputPage)
     .then(() => copyLibraries(libsDir, outputLibsDir))
     .then(() => compileRiotTags(srcDir, inputTagDirs, outputTagsFile))
+    .then(() => compileAppJs(inputAppPaths, outputAppJsFile))
     .then(() => {
       console.timeEnd('dev task');
       console.log('done.');
@@ -49,9 +55,9 @@ function compileHtml(inputPage, outputPage) {
       const outputHtml = result[0];
       return util.writeFile(outputPage, outputHtml);
     })
-    .then(res => {
+    .then(() => {
       console.timeEnd('compile HTML');
-      return res;
+      return true;
     });
 }
 
@@ -97,4 +103,52 @@ function compileRiotTags(srcDir, inputTagDirs, outputFile) {
       console.timeEnd('compile Riot tags');
       return true;
     });
+}
+
+/**
+ * compileAppJs takes as input the paths to directories and files that contain our application JS
+ * and that are not Riot tags. This returns a Promise that is resolved when the full compilation
+ * is complete.
+ */
+function compileAppJs(inputAppPaths, outputAppJsFile) {
+  console.time('compile app.js');
+
+  const inputFiles = [];
+  for (let inputPath of inputAppPaths) {
+    if (inputPath.endsWith('.js')) {
+      inputFiles.push(inputPath);
+    } else {
+      // assume it's a directory, add all files inside
+      inputFiles.push(...fse.walkSync(inputPath));
+    }
+  }
+
+  const fileReads = inputFiles.map(f => util.readFile(f));
+
+  return Promise.all(fileReads)
+    .then(fileContents => {
+      // concatenates and creates a sourcemap
+      const concat = new Concat(true, outputAppJsFile, '\n');
+      fileContents.forEach((fileContent, i) => {
+        const filePath = 'file://' + inputFiles[i];
+        concat.add(filePath, fileContent);
+      });
+
+      // transform with Babel and modify the sourcemap
+      const transformResult = babel.transform(concat.content, {
+        presets: ['es2015-riot'],
+        sourceMaps: true,
+        inputSourceMap: JSON.parse(concat.sourceMap),
+      });
+
+      // add the sourcemap as an inline comment
+      let sourcemapComment = '//# sourceMappingURL=data:application/json;base64,';
+      sourcemapComment += new Buffer(JSON.stringify(transformResult.map)).toString('base64');
+
+      return util.writeFile(outputAppJsFile, transformResult.code + '\n' + sourcemapComment);
+    })
+    .then(() => {
+      console.timeEnd('compile app.js');
+      return true;
+    })
 }
