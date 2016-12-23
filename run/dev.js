@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const babel = require('babel-core');
+const chokidar = require('chokidar');
 const Concat = require('concat-with-sourcemaps');
 const fse = require('fs-extra');
 const path = require('path');
@@ -36,9 +37,27 @@ function dev() {
     .then(() => copyLibraries(libsDir, outputLibsDir))
     .then(() => compileRiotTags(srcDir, inputTagDirs, outputTagsFile))
     .then(() => compileAppJs(inputAppPaths, outputAppJsFile))
+    .then(() => watch([libsDir, srcDir], rootDir, function (filePath) {
+      switch (true) {
+        case filePath === inputPage:
+          compileHtml(inputPage, outputPage);
+          break;
+
+        case filePath.startsWith(libsDir):
+          copyLibraries(libsDir, outputLibsDir);
+          break;
+
+        case filePath.endsWith('.tag'):
+          compileRiotTags(srcDir, inputTagDirs, outputTagsFile);
+          break;
+
+        case filePath.endsWith('.js'):
+          compileAppJs(inputAppPaths, outputAppJsFile);
+          break;
+      }
+    }))
     .then(() => {
       console.timeEnd('dev task');
-      console.log('done.');
     })
     .catch(err => {
       console.error('Something went wrong!', err.toString(), '\n', err.stack);
@@ -151,4 +170,34 @@ function compileAppJs(inputAppPaths, outputAppJsFile) {
       console.timeEnd('compile app.js');
       return true;
     })
+}
+
+/**
+ * watch will track changes on dirs, and run onChangeFn each time a change occurs. This function
+ * return a Promise that is resolved when the watcher has been initiated.
+ */
+function watch(dirs, rootDir, onChangeFn) {
+  return new Promise((resolve, reject) => {
+    let isReady = false;
+
+    chokidar
+      .watch(dirs, { ignoreInitial: true })
+      .on('ready', () => {
+        for (let dir of dirs) {
+          console.log(`watching ${path.relative(rootDir, dir)}...`);
+        }
+
+        isReady = true;
+        resolve(true);
+      })
+      .on('error', err => {
+        console.log(`Watcher error: ${error}`);
+        if (!isReady) reject(error);
+      })
+      .on('all', (event, filePath) => {
+        const time = (new Date()).toLocaleTimeString();
+        console.log(`[${time}] ${event}: ${path.relative(rootDir, filePath)}`);
+        onChangeFn(filePath);
+      });
+  });
 }
