@@ -1,8 +1,9 @@
-// global objects: Pod, riot
+/* polyfills present: fetch, Promise */
+
+/* global objects: Pod, riot */
 Pod.declare('riot', riot);
 
+/* start point */
 Pod.require(['riot'], function (riot) {
   riot.mount('app');
-  console.log('mounted!');
-  const five = 55;
 });

@@ -10,6 +10,7 @@
   },
   "devDependencies": {
     "babel-core": "^6.21.0",
+    "babel-plugin-transform-object-rest-spread": "^6.20.2",
     "babel-preset-es2015-riot": "^1.1.0",
     "chokidar": "^1.6.1",
     "concat-with-sourcemaps": "^1.0.4",

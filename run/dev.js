@@ -163,6 +163,7 @@ function compileAppJs(inputAppPaths, outputAppJsFile) {
       // transform with Babel and modify the sourcemap
       const transformResult = babel.transform(concat.content, {
         presets: ['es2015-riot'],
+        plugins: ['transform-object-rest-spread'],
         sourceMaps: true,
         inputSourceMap: JSON.parse(concat.sourceMap),
       });

@@ -1,7 +1,7 @@
 <app>
   <picker
     value={ selectedReddit }
-    onChange={ handleChange }
+    onPickerChange={ handleChange }
     options={ ['reactjs', 'frontend'] }
   />
   <p>
@@ -22,26 +22,58 @@
   </div>
 
   <script>
-    this.selectedReddit = 'frontend';
+    const { fetchPostsIfNeeded, invalidateReddit, selectReddit } = Pod.require('actions');
 
-    this.lastUpdated = Date.now();
+    /* View Model */
+    this.selectedReddit = '';
+    this.posts = [];
+    this.isFetching = false;
+    this.lastUpdated = null;
 
-    this.isFetching = true;
+    /* Flux Boilerplate (could be a mixin) */
+    this.store = Pod.require('store');
 
-    this.isEmpty = false;
+    this.on('before-mount', () => {
+      this.readStoreState(this.store.getState());
+      this.store.on('change', this.readStoreState);
+    });
 
-    this.posts = [
-      { title: 'How to shake the milk in milkshake' },
-      { title: 'Good morning, south dakota' },
-      { title: 'How I grew to love the semi-automatic riffle' },
-    ];
+    this.on('unmount', () => {
+      this.store.off('change', this.readStoreState);
+    });
 
-    handleChange() {
-      console.log('changed picker');
+    /** readStoreState maps the store state to updates for our component's view model */
+    readStoreState(state) {
+      const { selectedReddit, postsByReddit } = state;
+      const postsObj = postsByReddit[selectedReddit] || { isFetching: true, items: [] };
+      const { isFetching, lastUpdated, items: posts } = postsObj;
+
+      const updates = {
+        selectedReddit,
+        posts,
+        isFetching,
+        lastUpdated,
+      };
+
+      this.checkUpdates(updates);
+      this.update(updates);
     }
 
-    handleRefreshClick() {
-      console.log('clicked refresh');
+    /** checkUpdates responds to some updates with action dispatches */
+    checkUpdates(updates) {
+      if (updates.selectedReddit !== this.selectedReddit) {
+        fetchPostsIfNeeded(this.store, updates.selectedReddit);
+      }
+    }
+
+    handleChange(nextReddit) {
+      this.store.dispatch(selectReddit(nextReddit));
+    }
+
+    handleRefreshClick(e) {
+      e.preventDefault();
+      this.store.dispatch(invalidateReddit(this.selectedReddit));
+      fetchPostsIfNeeded(this.store, this.selectedReddit);
     }
   </script>
 </app>
