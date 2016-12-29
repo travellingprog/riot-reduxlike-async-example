@@ -27,7 +27,11 @@ function dev() {
   const inputPage = srcDir + '/pages/index.html';
   const inputTagDirs = [srcDir + '/components', srcDir + '/containers'];
   const inputAppPaths = [
-    srcDir + '/actions', srcDir + '/reducers', srcDir + '/store',  srcDir + '/index.js',
+    srcDir + '/actions',
+    srcDir + '/mixins',
+    srcDir + '/reducers',
+    srcDir + '/store',
+    srcDir + '/index.js',
   ];
 
   const outputPage = buildDir + '/index.html';

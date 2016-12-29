@@ -1,7 +1,7 @@
 <app>
   <picker
     value={ selectedReddit }
-    onPickerChange={ handleChange }
+    onpickerchange={ handleChange }
     options={ ['reactjs', 'frontend'] }
   />
   <p>
@@ -9,7 +9,7 @@
       Last updated at { new Date(lastUpdated).toLocaleTimeString() }.
       {' '}
     </span>
-    <a if={ !isFetching } href="#" onClick={ handleRefreshClick }>
+    <a if={ !isFetching } href="#" onclick={ handleRefreshClick }>
       Refresh
     </a>
   </p>
@@ -23,24 +23,14 @@
 
   <script>
     const { fetchPostsIfNeeded, invalidateReddit, selectReddit } = Pod.require('actions');
+    this.mixin('container');
 
     /* View Model */
     this.selectedReddit = '';
     this.posts = [];
     this.isFetching = false;
     this.lastUpdated = null;
-
-    /* Flux Boilerplate (could be a mixin) */
-    this.store = Pod.require('store');
-
-    this.on('before-mount', () => {
-      this.readStoreState(this.store.getState());
-      this.store.on('change', this.readStoreState);
-    });
-
-    this.on('unmount', () => {
-      this.store.off('change', this.readStoreState);
-    });
+    this.isEmpty = true;
 
     /** readStoreState maps the store state to updates for our component's view model */
     readStoreState(state) {
@@ -53,6 +43,7 @@
         posts,
         isFetching,
         lastUpdated,
+        isEmpty: posts.length === 0,
       };
 
       this.checkUpdates(updates);
