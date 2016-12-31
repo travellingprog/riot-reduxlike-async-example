@@ -1,8 +1,13 @@
 Pod.define('reducers', ['actions'], actions => {
+  /**
+   * reducers exports the Redux reducers that compute a store's state. Each reducer defines its
+   * default value.
+   */
   let exports = {};
   const { SELECT_REDDIT, INVALIDATE_REDDIT, REQUEST_POSTS, RECEIVE_POSTS } = actions;
 
-  exports.selectedReddit = (state = 'reactjs', action) => {
+  /** selectedReddit is the subreddit selected by the user */
+  exports.selectedReddit = (state = 'riotjs', action) => {
     switch (action.type) {
       case SELECT_REDDIT:
         return action.reddit;
@@ -11,6 +16,10 @@ Pod.define('reducers', ['actions'], actions => {
     }
   };
 
+  /**
+   * posts defines the state of a subreddit's posts: are they being fetched? are the posts in the
+   * cache invalid? etc.
+   */
   function posts(state = {
     isFetching: false,
     didInvalidate: false,
@@ -41,6 +50,7 @@ Pod.define('reducers', ['actions'], actions => {
     }
   }
 
+  /** postsByReddit is a map of subreddits to their posts' state */
   exports.postsByReddit = (state = { }, action) => {
     switch (action.type) {
       case INVALIDATE_REDDIT:

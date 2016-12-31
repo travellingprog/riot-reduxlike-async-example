@@ -2,7 +2,7 @@
   <picker
     value={ selectedReddit }
     onpickerchange={ handleChange }
-    options={ ['reactjs', 'frontend'] }
+    options={ ['riotjs', 'frontend'] }
   />
   <p>
     <span if={ lastUpdated }>
@@ -57,10 +57,12 @@
       }
     }
 
+    /** handleChange is called when our picker's value is changed */
     handleChange(nextReddit) {
       this.store.dispatch(selectReddit(nextReddit));
     }
 
+    /** handleRefreshClick is called by our Refresh button */
     handleRefreshClick(e) {
       e.preventDefault();
       this.store.dispatch(invalidateReddit(this.selectedReddit));
