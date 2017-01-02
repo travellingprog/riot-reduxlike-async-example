@@ -68,10 +68,6 @@ Pod.define('store', ['reducers', 'middlewares'], (reducers, middlewares) => {
         this.state = newState;
         this.trigger('change', this.state);
       }
-
-      if (Math.random() < 0.25) {
-        throw new Error('Here is a test error!');
-      }
     }
 
     /** equalStates checks if two states have the same values, assuming they are plain objects */
