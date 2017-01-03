@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+console.log('loading task dependencies...');
+console.time('load task dependencies');
+
+// require('time-require'); // <- useful for logging require() times
 const babel = require('babel-core');
 const chokidar = require('chokidar');
 const Concat = require('concat-with-sourcemaps');
@@ -13,9 +17,14 @@ const serveStatic = require('serve-static');
 const useref = require('useref');
 const util = require('./util');
 
+console.timeEnd('load task dependencies');
+
 dev();
 
-/** dev runs the compiler for the development build */
+/**
+ * dev runs the compiler for the development build, starts a static server, launches the app and
+ * starts a watcher as well.
+ */
 function dev() {
   console.time('dev task');
 
