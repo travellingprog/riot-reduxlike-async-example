@@ -4,13 +4,17 @@ Pod.define('middleware/logger', () => {
    * Redux Logger clone, but without any options or copied source code. This might cause issues in
    * browsers that don't support colored console msgs or console.groupCollapsed()/groupEnd().
    */
+
+  const offsetTime = (new Date()).getTimezoneOffset() * 60 * 1000; // offset in milliseconds
+
   return function logger(store, next, action) {
     const prevState = store.getState();
     let result = next(action);
     const nextState = store.getState();
 
-    const d = new Date();
-    const time = `${d.getHours()}:${d.getMinutes()}:${d.getSeconds()}.${d.getMilliseconds()}`;
+    // get time in format HH:mm:ss.sss
+    const time = (new Date(Date.now() - offsetTime)).toISOString().match(/T(.*)Z/)[1];
+
     console.groupCollapsed(`action @ ${time} ${action.type}`);
     console.log('%cprev state', 'font-weight: bold; color: #8a8a8a', prevState);
     console.log('%caction', 'font-weight: bold; color: #0095f5', action);
