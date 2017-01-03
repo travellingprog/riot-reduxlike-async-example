@@ -8,14 +8,14 @@
   <body>
     <app></app>
 
-    <!-- build:js assets/js/libs.js -->
+    <!-- build:js assets/js/libs.%LIBS_HASH%.js -->
     <script src="assets/js/libs/promise.min.js"></script>
     <script src="assets/js/libs/whatwg-fetch.min.js"></script>
     <script src="assets/js/libs/pods.min.js"></script>
     <script src="assets/js/libs/riot.min.js"></script>
     <!-- endbuild -->
 
-    <!-- build:js assets/js/app.min.js -->
+    <!-- build:js assets/js/app.%APP_HASH%.min.js -->
     <script src="assets/js/tags.js"></script>
     <script src="assets/js/app.js"></script>
     <!-- endbuild -->
