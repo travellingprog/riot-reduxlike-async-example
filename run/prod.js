@@ -1,17 +1,16 @@
 #!/usr/bin/env node
 
-console.log('loading task dependencies...');
 console.time('load task dependencies');
 
+console.log('loading babel...');  // ...which takes a while
+// require('time-require'); // <- useful for logging require() times
 const babel = require('babel-core');
+
+console.log('loading other dependencies...')
 const crypto = require('crypto');
-const finalhandler = require('finalhandler');
 const fse = require('fs-extra');
-const http = require('http');
-const opn = require('opn');
 const path = require('path');
 const riot = require('riot');
-const serveStatic = require('serve-static');
 const UglifyJS = require('uglify-js');
 const useref = require('useref');
 const util = require('./util');
@@ -42,20 +41,20 @@ function prod() {
   const outputJsDir = buildDir + '/assets/js';
 
   const serverPort = 9000;
-  const hashes = {}; // for SHA1 hashes injected into filenames
+  const filenames = {}; // for storing filenames with hashes in them
 
   fse.removeSync(buildDir);
 
   concatLibraries(libsDir, outputJsDir)
-    .then(libsHash => {
-      hashes.LIBS_HASH = libsHash;
+    .then(libsFile => {
+      filenames.LIBS_FILE = libsFile;
       return compileAppFile(inputTagDirs, inputAppPaths, outputJsDir);
     })
-    .then(appHash => {
-      hashes.APP_HASH = appHash;
-      return compileHtml(inputPage, hashes, outputPage);
+    .then(appFile => {
+      filenames.APP_FILE = appFile;
+      return compileHtml(inputPage, filenames, outputPage);
     })
-    .then(() => startServer(buildDir, serverPort))
+    .then(() => util.startServer(buildDir, serverPort, true))
     .then(() => {
       console.timeEnd('prod task');
     })
@@ -65,13 +64,14 @@ function prod() {
 }
 
 /**
- * concatLibraries simply concatanates all library files into one file, and returns the hash of
- * the file contents
+ * concatLibraries simply concatanates all library files into one file, and returns a filename with
+ * the hash of the file contents
  */
 function concatLibraries(libsDir, outputJsDir) {
   console.time('concatenating libraries');
 
-  let hashStr = null;
+  let filename = null;
+
   const fileReads = fse.walkSync(libsDir)
     .filter(f => !(/\/\..*$/.test(f))) // ignore hidden files and folders
     .map(util.readFile);
@@ -79,24 +79,24 @@ function concatLibraries(libsDir, outputJsDir) {
   return Promise.all(fileReads)
     .then(jsArr => {
       const js = jsArr.join('\n');
-      hashStr = hash(js);
-      return util.writeFile(outputJsDir + `/libs.${hashStr}.js`, js);
+      filename = `libs.${ hash(js) }.js`;
+      return util.writeFile(`${outputJsDir}/${filename}`, js);
     })
     .then(() => {
       console.timeEnd('concatenating libraries');
-      return hashStr;
+      return filename;
     });
 }
 
 /**
  * compileAppFile triggers the compilation of the Riot tags, and the rest of the application code.
- * All of this code is placed inside a single minified file, and a hash of the file content is
- * returned.
+ * All of this code is placed inside a single minified file, and a filename with a hash of the file
+ * content is returned.
  */
 function compileAppFile(inputTagDirs, inputAppPaths, outputJsDir) {
   console.time('compile app.min.js');
 
-  let hashStr = null;
+  let filename = null;
 
   const riotFiles = [];
   for (let dir of inputTagDirs) {
@@ -132,12 +132,12 @@ function compileAppFile(inputTagDirs, inputAppPaths, outputJsDir) {
       });
 
       const miniCode = UglifyJS.minify(transformResult.code, { fromString: true }).code;
-      hashStr = hash(miniCode);
-      return util.writeFile(outputJsDir + `/app.${hashStr}.min.js`, miniCode);
+      filename = `app.${ hash(miniCode) }.min.js`;
+      return util.writeFile(`${outputJsDir}/${filename}`, miniCode);
     })
     .then(() => {
-      console.time('compile app.min.js');
-      return hashStr;
+      console.timeEnd('compile app.min.js');
+      return filename;
     });
 }
 
@@ -150,17 +150,17 @@ function hash(str) {
 }
 
 /**
- * compileHtml takes our input HTML file, injects filename hashes into the build blocks and passes
- * it through useref before outputting it
+ * compileHtml takes our input HTML file, injects production filenames into the build blocks and
+ * passes it through useref before outputting it
  */
-function compileHtml(inputPage, hashes, outputPage) {
+function compileHtml(inputPage, filenames, outputPage) {
   console.time('compile HTML');
 
   return util.readFile(inputPage)
     .then(inputHtml => {
       const inputWithHashes = inputHtml
-        .replace('%LIBS_HASH%', hashes.LIBS_HASH)
-        .replace('%APP_HASH%', hashes.APP_HASH);
+        .replace('%LIBS_FILE%', filenames.LIBS_FILE)
+        .replace('%APP_FILE%', filenames.APP_FILE);
       const result = useref(inputWithHashes);
       const outputHtml = result[0];
       return util.writeFile(outputPage, outputHtml);
@@ -169,28 +169,4 @@ function compileHtml(inputPage, hashes, outputPage) {
       console.timeEnd('compile HTML');
       return true;
     });
-}
-
-/** startServer begins a static server and opens the root path in the browser */
-function startServer(dir, port) {
-  console.time('static server');
-
-  return new Promise((resolve, reject) => {
-    let isReady = false;
-    const serve = serveStatic(dir, { maxAge: 10 * 365 * 24 * 60 * 60 * 1000 });
-
-    http
-      .createServer((req, res) => {
-        serve(req, res, finalhandler(req, res))
-      })
-      .on('error', err => {
-        console.error(`Server error: ${err}`);
-        if (!isReady) reject(err);
-      })
-      .listen(port, 'localhost', () => {
-        opn(`http://localhost:${port}/`);
-        console.timeEnd('static server');
-        resolve(true);
-      });
-  });
 }

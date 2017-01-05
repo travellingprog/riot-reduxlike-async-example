@@ -1,19 +1,17 @@
 #!/usr/bin/env node
 
-console.log('loading task dependencies...');
 console.time('load task dependencies');
 
+console.log('loading babel...');  // ...which takes a while
 // require('time-require'); // <- useful for logging require() times
 const babel = require('babel-core');
+
+console.log('loading other dependencies...');
 const chokidar = require('chokidar');
 const Concat = require('concat-with-sourcemaps');
-const finalhandler = require('finalhandler');
 const fse = require('fs-extra');
-const http = require('http');
-const opn = require('opn');
 const path = require('path');
 const riot = require('riot');
-const serveStatic = require('serve-static');
 const useref = require('useref');
 const util = require('./util');
 
@@ -55,7 +53,7 @@ function dev() {
     .then(() => copyLibraries(libsDir, outputLibsDir))
     .then(() => compileRiotTags(srcDir, inputTagDirs, outputTagsFile))
     .then(() => compileAppJs(inputAppPaths, outputAppJsFile))
-    .then(() => startServer(buildDir, serverPort))
+    .then(() => util.startServer(buildDir, serverPort))
     .then(() => watch([libsDir, srcDir], rootDir, function (filePath) {
       switch (true) {
         case filePath === inputPage:
@@ -190,30 +188,6 @@ function compileAppJs(inputAppPaths, outputAppJsFile) {
       console.timeEnd('compile app.js');
       return true;
     })
-}
-
-/** startServer begins a static server and opens the root path in the browser */
-function startServer(dir, port) {
-  console.time('static server');
-
-  return new Promise((resolve, reject) => {
-    let isReady = false;
-    const serve = serveStatic(dir);
-
-    http
-      .createServer((req, res) => {
-        serve(req, res, finalhandler(req, res))
-      })
-      .on('error', err => {
-        console.error(`Server error: ${err}`);
-        if (!isReady) reject(err);
-      })
-      .listen(port, 'localhost', () => {
-        opn(`http://localhost:${port}/`);
-        console.timeEnd('static server');
-        resolve(true);
-      });
-  });
 }
 
 /**
