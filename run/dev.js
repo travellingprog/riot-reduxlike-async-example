@@ -113,21 +113,18 @@ function copyLibraries(libsDir, outputLibsDir) {
 function compileRiotTags(srcDir, inputTagDirs, outputFile) {
   console.time('compile Riot tags');
 
-  const inputFiles = [];
-  for (let dir of inputTagDirs) {
-    inputFiles.push(...fse.walkSync(dir));
-  }
+  const fileCompilations = util
+    .getAllFiles(inputTagDirs, '.tag')
+    .map(f => {
+      return util.readFile(f)
+        .then(tag => {
+          let preBabelJS = riot.compile(tag);
 
-  const fileCompilations = inputFiles.map(f => {
-    return util.readFile(f)
-      .then(tag => {
-        let preBabelJS = riot.compile(tag);
-
-        // this adds a source reference, because Riot doesn't produce a sourcemap AST yet
-        preBabelJS = `// source: ${path.relative(srcDir, f)}\n${preBabelJS}`;
-        return preBabelJS;
-      });
-  });
+          // this adds a source reference, because Riot doesn't produce a sourcemap AST yet
+          preBabelJS = `// source: ${path.relative(srcDir, f)}\n${preBabelJS}`;
+          return preBabelJS;
+        });
+    });
 
   return Promise.all(fileCompilations)
     .then(preBabelArr => {
@@ -149,17 +146,8 @@ function compileRiotTags(srcDir, inputTagDirs, outputFile) {
 function compileAppJs(inputAppPaths, outputAppJsFile) {
   console.time('compile app.js');
 
-  const inputFiles = [];
-  for (let inputPath of inputAppPaths) {
-    if (inputPath.endsWith('.js')) {
-      inputFiles.push(inputPath);
-    } else {
-      // assume it's a directory, add all files inside
-      inputFiles.push(...fse.walkSync(inputPath));
-    }
-  }
-
-  const fileReads = inputFiles.map(f => util.readFile(f));
+  const inputFiles = util.getAllFiles(inputAppPaths);
+  const fileReads = inputFiles.map(util.readFile);
 
   return Promise.all(fileReads)
     .then(fileContents => {

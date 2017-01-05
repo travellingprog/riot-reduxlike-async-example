@@ -71,10 +71,7 @@ function concatLibraries(libsDir, outputJsDir) {
   console.time('concatenating libraries');
 
   let filename = null;
-
-  const fileReads = fse.walkSync(libsDir)
-    .filter(f => !(/\/\..*$/.test(f))) // ignore hidden files and folders
-    .map(util.readFile);
+  const fileReads = util.getAllFiles(libsDir).map(util.readFile);
 
   return Promise.all(fileReads)
     .then(jsArr => {
@@ -98,27 +95,13 @@ function compileAppFile(inputTagDirs, inputAppPaths, outputJsDir) {
 
   let filename = null;
 
-  const riotFiles = [];
-  for (let dir of inputTagDirs) {
-    riotFiles.push(...fse.walkSync(dir).filter(f => !(/\/\..*$/.test(f))));
-  }
+  const riotCompilations = util
+    .getAllFiles(inputTagDirs, '.tag')
+    .map(f =>
+      util.readFile(f).then(tag => riot.compile(tag))
+    );
 
-  const riotCompilations = riotFiles.map(f => {
-    return util.readFile(f)
-      .then(tag => riot.compile(tag))
-  });
-
-  const appJsFiles = [];
-  for (let inputPath of inputAppPaths) {
-    if (inputPath.endsWith('.js')) {
-      appJsFiles.push(inputPath);
-    } else {
-      // assume it's a directory, add all files inside
-      appJsFiles.push(...fse.walkSync(inputPath).filter(f => !(/\/\..*$/.test(f))));
-    }
-  }
-
-  const appFileReads = appJsFiles.map(util.readFile);
+  const appFileReads = util.getAllFiles(inputAppPaths).map(util.readFile);
 
   const allJsLoad = riotCompilations.concat(appFileReads);
 
