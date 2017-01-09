@@ -1,6 +1,6 @@
 <app>
   <picker
-    value={ selectedReddit }
+    selection={ selectedReddit }
     onpickerchange={ handleChange }
     options={ ['riotjs', 'frontend'] }
   />

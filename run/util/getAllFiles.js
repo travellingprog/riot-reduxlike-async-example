@@ -1,5 +1,4 @@
 const fse = require('fs-extra');
-const readFile = require('./readFile');
 
 /**
  * getAllFiles takes an array of directories and/or filenames, and returns an array of filenames

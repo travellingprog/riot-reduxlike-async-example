@@ -1,7 +1,7 @@
 <picker>
   <span>
-    <h1>{ opts.value }</h1>
-    <select onchange={ onChange } value={ opts.value }>
+    <h1>{ opts.selection }</h1>
+    <select onchange={ onChange } value={ opts.selection }>
       <option each={ val, i in opts.options } value={ val }>
         { val }
       </option>
