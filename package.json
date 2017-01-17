@@ -2,9 +2,21 @@
   "name": "riot-reduxlike-async-example",
   "version": "0.0.1",
   "description": "Riot and Redux-like store showing the async example",
+  "keywords": [
+    "riot",
+    "redux"
+  ],
   "main": "src/index.js",
   "author": "travellingprog",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/travellingprog/riot-reduxlike-async-example.git"
+  },
+  "engines": {
+    "node": "^6.9.4",
+    "yarn": ">=0.19.1 <1.0.0"
+  },
   "scripts": {
     "start": "node run/dev"
   },
@@ -15,7 +27,8 @@
     "chokidar": "^1.6.1",
     "concat-with-sourcemaps": "^1.0.4",
     "finalhandler": "^0.5.1",
-    "fs-extra": "^1.0.0",
+    "fs-extra": "^2.0.0",
+    "klaw-sync": "^1.0.1",
     "opn": "^4.0.2",
     "serve-static": "^1.11.1",
     "time-require": "^0.1.2",
@@ -23,6 +36,6 @@
     "useref": "^1.2.0"
   },
   "dependencies": {
-    "riot": "^3.0.5"
+    "riot": "^3.0.7"
   }
 }

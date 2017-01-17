@@ -1,4 +1,4 @@
-const fse = require('fs-extra');
+const klawSync = require('klaw-sync')
 
 /**
  * getAllFiles takes an array of directories and/or filenames, and returns an array of filenames
@@ -16,8 +16,9 @@ module.exports = function getAllFiles(inputPaths, extension = '.js') {
       files.push(inputPath);
     } else {
       // assume it's a directory, add all files inside with the right extension
-      const filesInDir = fse.walkSync(inputPath)
-        .filter(f => f.endsWith(extension));
+      const filesInDir = klawSync(inputPath, {nodir: true})
+        .filter(f => f.path.endsWith(extension))
+        .map(f => f.path);
 
       files.push(...filesInDir);
     }
