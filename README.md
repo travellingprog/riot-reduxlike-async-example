@@ -77,16 +77,35 @@ So, `fetchPostsIfNeeded()`, an asynchronous action creator, doesn't return an ac
 
 In my opinion, this could be greatly simplified and doesn't need the use of middleware. All you need to do is pass the Store to the asynchronous action creator.
 
-
-
 ## Findings
 
+### Faster, More Flexible Build Tool
 
+By making use of the Node modules directly, my hope was that I would achieve very fast build times. I'm glad to say that this is indeed the case, my first builds typically take about 5 seconds on my 2013 Macbook Pro, and that includes starting and navigating to a static server. Subsequent builds are even faster, under 2 seconds.
 
-Missing in Dev UX:
-- sourcemaps for our components (because of Riot compiler)
-- PropTypes
-- redux logger with tons of options
+More importantly, because I created my build scripts myself, and all that code is right there in the repository, it's much easier for me to address any problems I come across and modify any build step.
+
+A good example to illustrate this is in my production build script. I wanted the filenames of the JavaScript files to contain a hash created from the file contents, for browser cache busting. I then wanted those filenames to be injected into my `index.html` source file *before* it gets processed by [useref](https://github.com/jonkemp/useref). To achieve that with Gulp or Webpack plugins would have been... difficult. Not impossible, but certainly not straightforward. But in my custom Node build scripts, because I had a ton of flexibility, it was quite easy to implement.
+
+### Smaller Application Size
+
+The Redux async example application is very small, and yet the production build loads 186 kB of JavaScript. The development build is much bigger than that. And that's despite the fact that the application makes use of [create-react-app](https://github.com/facebookincubator/create-react-app), which implements a bunch of Webpack build optimizations.
+
+On the other hand, my application loads 41 kB of JavaScript, **a reduction of 78%**! And on top of that, only 6 kB of that load represent my application code, the rest is external libraries. That's despite the fact that the only minification tool I'm making use of is UglifyJS.
+
+### Lack of Sourcemaps
+
+One drawback I discovered is that the Riot compiler does not have the ability to produce a sourcemap. There's an [open issue](https://github.com/riot/compiler/issues/56) about this, and hopefully it gets addressed for the next version of the compiler, but it certainly has a noticeable negative impact on the development experience. Some work is underway on this front, and I may decide to contribute to it, or I may look at other tiny UI libraries, like [Vue](https://github.com/vuejs/vue) or [Preact](https://github.com/developit/preact). Unfortunately, developing with those other libraries requires also making use of a module bundler like Browserify or Webpack, which is something I wanted to avoid.
+
+### Loading Babel Is Very Slow
+
+I was willing to sacrifice the use of ES2015 modules, but not ES2015 altogether. Thus, I had to make use of Babel. Unfortunately, I've found that simply importing babel-core for the first time adds a significant amount of time to my build compilations. While a build only takes me about 5 seconds, 2-3 of those seconds will just be spend on importing babel-core. An initial Babel compilation also seems to take significantly more time than subsequent compilations. I wasn't able to figure out why importing Babel took so long, or why it was so much faster afterward the initial use, but if anyone wants to create a modern JS build tool that feels nearly instantaneous, they'll have to face this obstacle as well.
+
+### Custom Redux-y store
+
+However, my logger middleware does not have tons of options.
+
+### Diffulty Importing Third-Party Modules
 
 
 ## Possible Future Improvements
