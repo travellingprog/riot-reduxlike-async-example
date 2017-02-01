@@ -101,12 +101,69 @@ One drawback I discovered is that the Riot compiler does not have the ability to
 
 I was willing to sacrifice the use of ES2015 modules, but not ES2015 altogether. Thus, I had to make use of Babel. Unfortunately, I've found that simply importing babel-core for the first time adds a significant amount of time to my build compilations. While a build only takes me about 5 seconds, 2-3 of those seconds will just be spend on importing babel-core. An initial Babel compilation also seems to take significantly more time than subsequent compilations. I wasn't able to figure out why importing Babel took so long, or why it was so much faster afterward the initial use, but if anyone wants to create a modern JS build tool that feels nearly instantaneous, they'll have to face this obstacle as well.
 
-### Custom Redux-y store
+### Custom Redux-y Flux Implementation
 
-However, my logger middleware does not have tons of options.
+Using Riot's built-in [Observable](http://riotjs.com/api/observable/) mixin, I was able to create a Flux store that functions very closely like the one provided by Redux. It uses an object of reducers to compute the store's state, and an array of middleware functions can set on dispatches. 
+
+The middleware function's signature is simpler in my implementation:
+```js
+// my version
+function middleware(store, next, action) {
+    const prevState = store.getState();
+    let result = next(action);
+    const nextState = store.getState();
+}
+
+// compared to the Redux version...
+function middleware(store) {
+    return function (next) {
+        return function (action) {
+            const prevState = store.getState();
+            let result = next(action);
+            const nextState = store.getState();
+        }
+    }
+}
+```
+
+I should note that although Redux's version is more complex, it does offer more capabilities. For example, a middleware function can call `store.dispatch(action)` in Redux, and "the action will actually travel the whole middleware chain again, including the current middleware".
+
+I created a logger middleware which is essentially a clone of Redux-logger's default behaviour, although it does not offer any options whatsoever. I also created a "crash Reporter" middleware, although at this point all it does is store error messages (from dispactches) inside of LocalStorage.
+
+Another notable difference in my implementation is how [async action creators](http://redux.js.org/docs/advanced/AsyncActions.html#async-action-creators) work. With Redux, you use something like [thunk-middleware](https://github.com/gaearon/redux-thunk) to achieve this. In my implementation, you simply pass the whole store as the first argument of the creator function:
+
+```js
+// Compare this to the Redux example in the "Rethinking Redux" section above
+
+/** src/containers/app.tag */
+fetchPostsIfNeeded(this.store, this.selectedReddit);
+
+/** src/flux/actions.js */
+function fetchPosts(dispatch, reddit) {
+  dispatch(exports.requestPosts(reddit));
+  return fetch(`https://www.reddit.com/r/${reddit}.json`)
+    .then(response => response.json())
+    .then(json => dispatch(exports.receivePosts(reddit, json)));
+}
+
+const shouldFetchPosts = (state, reddit) => {
+  // returns true or false, based on state
+}
+
+exports.fetchPostsIfNeeded = (store, reddit) => {
+  if (shouldFetchPosts(store.getState(), reddit)) {
+    return fetchPosts(store.dispatch, reddit);
+  }
+};
+```
+
+I should also note that although my Flux store made use of Riot's Observable mixin, I could have built it with any event emitter (like [mitt](https://github.com/developit/mitt)).
 
 ### Diffulty Importing Third-Party Modules
 
+The biggest difficulty I saw with abandoning the use of a module bundler (like Browserify, Webpack or Rollup) was the importing of third-party modules. Because module bundlers have become a standard tool in front-end development, many third-party client-side modules these days are written like NodeJS modules. Unfortunately, [Pods.js](https://github.com/gmac/pods.js) has no capability of loading NodeJS-type modules, nor ES6-type modules. It would not take too much work to create a Pods wrapper for UMD modules, but unfortunately UMD seems to have become a lot less popular in the past few years.
+
+Therefore, I must conclude that foregoing a module bundler likely means running into obstacles if you wish to use a third-party frontend modules.
 
 ## Possible Future Improvements
 
